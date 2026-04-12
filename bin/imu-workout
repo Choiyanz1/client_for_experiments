@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "$SCRIPT_DIR/.venv/Scripts/activate" ]]; then
+    # Windows venv (Git Bash/MSYS)
+    source "$SCRIPT_DIR/.venv/Scripts/activate"
+    BT_CLIENT="$SCRIPT_DIR/zig-out/bin/zig_bt_client.exe"
+else
+    source "$SCRIPT_DIR/.venv/bin/activate"
+    BT_CLIENT="$SCRIPT_DIR/zig-out/bin/zig_bt_client"
+fi
+if [[ ! -f "$BT_CLIENT" ]] && [[ -f "${BT_CLIENT%.exe}" ]]; then
+    BT_CLIENT="${BT_CLIENT%.exe}"
+fi
+exec "$BT_CLIENT" --stdout | python "$SCRIPT_DIR/tools/imu_workout_gui.py" "$@"

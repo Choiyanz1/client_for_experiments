@@ -1,0 +1,18 @@
+*.csv
+.zig-cache/
+.DS_Store
+zig-out/
+
+# Fuck python
+*.py
+
+!tools/*.py
+!ppg_pipeline/*.py
+!scripts/*.py
+
+*lock
+.venv/
+
+pyproject.toml
+.python-version
+*.mp4

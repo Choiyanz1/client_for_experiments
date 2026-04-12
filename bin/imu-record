@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BT_CLIENT="$SCRIPT_DIR/zig-out/bin/zig_bt_client"
+if [[ -f "$SCRIPT_DIR/zig-out/bin/zig_bt_client.exe" ]]; then
+    BT_CLIENT="$SCRIPT_DIR/zig-out/bin/zig_bt_client.exe"
+fi
+exec "$BT_CLIENT" "$@"
