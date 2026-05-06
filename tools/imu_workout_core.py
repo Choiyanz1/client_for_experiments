@@ -43,6 +43,7 @@ CSV_HEADERS_FULL = [
     "weight_kg",
     "subject_id",
     "ppg_a", "ppg_b", "ppg_c", "ppg_d", "ppg_e",
+    "ppg_f", "ppg_g", "ppg_h", "ppg_i", "ppg_j",
 ]
 
 # Headers for segmented files (phase in row data, not in filename; no fusion)
@@ -58,6 +59,7 @@ CSV_HEADERS_SEGMENTED = [
     "rpe",
     "weight_kg",
     "ppg_a", "ppg_b", "ppg_c", "ppg_d", "ppg_e",
+    "ppg_f", "ppg_g", "ppg_h", "ppg_i", "ppg_j",
 ]
 
 # ========================= Label state =========================
@@ -137,7 +139,27 @@ waveform_ppg_d = {"x": collections.deque(maxlen=WAVEFORM_LEN),
 waveform_ppg_e = {"x": collections.deque(maxlen=WAVEFORM_LEN),
                   "y": collections.deque(maxlen=WAVEFORM_LEN),
                   "z": collections.deque(maxlen=WAVEFORM_LEN)}
+waveform_ppg_f = {"x": collections.deque(maxlen=WAVEFORM_LEN),
+                  "y": collections.deque(maxlen=WAVEFORM_LEN),
+                  "z": collections.deque(maxlen=WAVEFORM_LEN)}
+waveform_ppg_g = {"x": collections.deque(maxlen=WAVEFORM_LEN),
+                  "y": collections.deque(maxlen=WAVEFORM_LEN),
+                  "z": collections.deque(maxlen=WAVEFORM_LEN)}
+waveform_ppg_h = {"x": collections.deque(maxlen=WAVEFORM_LEN),
+                  "y": collections.deque(maxlen=WAVEFORM_LEN),
+                  "z": collections.deque(maxlen=WAVEFORM_LEN)}
+waveform_ppg_i = {"x": collections.deque(maxlen=WAVEFORM_LEN),
+                  "y": collections.deque(maxlen=WAVEFORM_LEN),
+                  "z": collections.deque(maxlen=WAVEFORM_LEN)}
+waveform_ppg_j = {"x": collections.deque(maxlen=WAVEFORM_LEN),
+                  "y": collections.deque(maxlen=WAVEFORM_LEN),
+                  "z": collections.deque(maxlen=WAVEFORM_LEN)}
 waveform_lock = threading.Lock()
+
+PPG_CHANNEL_COUNT = 10
+PPG_MIN_CHANNEL_COUNT = 5
+RAW_COL_PPG_START = 4
+RAW_COL_IMU_START = RAW_COL_PPG_START + PPG_CHANNEL_COUNT
 
 # ========================= Fusion (xio Fusion) =========================
 SAMPLE_RATE = 100  # approximate Hz
@@ -662,7 +684,7 @@ def write_csv_row(serial_num, sensor_ts, host_ts, ppg_values_list, ax, ay, az, g
                 labels["rpe"],
                 labels["weight_kg"],
                 labels["subject_id"],
-                *(ppg_values_list if len(ppg_values_list) == 5 else (ppg_values_list + [0.0] * 5)[:5]),
+                *((ppg_values_list + [0.0] * PPG_CHANNEL_COUNT)[:PPG_CHANNEL_COUNT]),
             ]
             writer_ws.writerow(row_full)
             f_ws.flush()
@@ -713,16 +735,16 @@ def write_csv_row(serial_num, sensor_ts, host_ts, ppg_values_list, ax, ay, az, g
 # Waveforms for each sensor are updated only with their own real data (no zeros).
 
 PPG_HISTORY_MAX = 200
-ppg_history = collections.deque(maxlen=PPG_HISTORY_MAX)  # (host_ts, [5 floats])
+ppg_history = collections.deque(maxlen=PPG_HISTORY_MAX)  # (host_ts, [10 floats])
 ppg_history_lock = threading.Lock()
 
 
 def interpolate_ppg(target_ts):
-    """Linearly interpolate 5-channel PPG values at *target_ts*."""
+    """Linearly interpolate PPG values at *target_ts*."""
     with ppg_history_lock:
         n = len(ppg_history)
         if n == 0:
-            return [0.0] * 5
+            return [0.0] * PPG_CHANNEL_COUNT
         if n == 1:
             return list(ppg_history[0][1])
 
@@ -740,7 +762,7 @@ def interpolate_ppg(target_ts):
         if after is None and before is not None:
             return list(before[1])
         if before is None and after is None:
-            return [0.0] * 5
+            return [0.0] * PPG_CHANNEL_COUNT
         if before[0] == after[0]:
             return list(before[1])
 
@@ -753,7 +775,7 @@ def interpolate_ppg(target_ts):
 def parse_and_process_line(line):
     """
     Parse a raw CSV line from zig_bt_client.
-    Format: serial, type, ts, host_ts, ppg_a..e, ax, ay, az, gx, gy, gz, mx, my, mz (18 cols)
+    Format: serial, type, ts, host_ts, ppg_a..j, ax, ay, az, gx, gy, gz, mx, my, mz (23 cols)
     PPG rows  → store in history, update PPG waveforms only.
     IMU rows  → interpolate PPG at IMU timestamp, update IMU waveforms, write CSV.
     """
@@ -763,7 +785,7 @@ def parse_and_process_line(line):
     cols = [c.strip() for c in line.split(",")]
     n = len(cols)
 
-    if n < 14:
+    if n < RAW_COL_PPG_START + PPG_MIN_CHANNEL_COUNT:
         return None
 
     try:
@@ -772,11 +794,11 @@ def parse_and_process_line(line):
         sensor_ts = cols[2]
         host_ts = int(cols[3])
 
-        # PPG values (columns 4-8)
-        ppg_values = [float(cols[4 + i]) if 4 + i < n else 0.0 for i in range(5)]
+        # PPG values (columns 4-13)
+        ppg_values = [float(cols[RAW_COL_PPG_START + i]) if RAW_COL_PPG_START + i < n else 0.0 for i in range(PPG_CHANNEL_COUNT)]
 
-        # IMU values (columns 9-17)
-        imu_start = 9
+        # IMU values (columns 14-22)
+        imu_start = RAW_COL_IMU_START
         if n >= imu_start + 6:
             ax, ay, az = float(cols[imu_start]), float(cols[imu_start + 1]), float(cols[imu_start + 2])
             gx, gy, gz = float(cols[imu_start + 3]), float(cols[imu_start + 4]), float(cols[imu_start + 5])
@@ -804,6 +826,11 @@ def parse_and_process_line(line):
             waveform_ppg_c["x"].append(ppg_values[2] if len(ppg_values) > 2 else 0.0)
             waveform_ppg_d["x"].append(ppg_values[3] if len(ppg_values) > 3 else 0.0)
             waveform_ppg_e["x"].append(ppg_values[4] if len(ppg_values) > 4 else 0.0)
+            waveform_ppg_f["x"].append(ppg_values[5] if len(ppg_values) > 5 else 0.0)
+            waveform_ppg_g["x"].append(ppg_values[6] if len(ppg_values) > 6 else 0.0)
+            waveform_ppg_h["x"].append(ppg_values[7] if len(ppg_values) > 7 else 0.0)
+            waveform_ppg_i["x"].append(ppg_values[8] if len(ppg_values) > 8 else 0.0)
+            waveform_ppg_j["x"].append(ppg_values[9] if len(ppg_values) > 9 else 0.0)
         return None
 
     elif sensor_type == "IMU":
@@ -832,7 +859,7 @@ def parse_and_process_line(line):
 
     else:
         # Unknown type — write as-is
-        ppg_for_write = ppg_values if any(ppg_values) else [0.0] * 5
+        ppg_for_write = ppg_values if any(ppg_values) else [0.0] * PPG_CHANNEL_COUNT
         write_csv_row(serial_num, sensor_ts, host_ts, ppg_for_write,
                       ax, ay, az, gx, gy, gz, mx, my, mz)
         return None

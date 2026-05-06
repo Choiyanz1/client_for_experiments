@@ -282,12 +282,23 @@ class LabelGUIQt(QMainWindow):
             imu_row.addWidget(widget)
         wave_layout.addLayout(imu_row)
 
-        ppg_row = QHBoxLayout()
-        for title in ("PPG A", "PPG B", "PPG C", "PPG D", "PPG E"):
+        ppg_ch1_row = QHBoxLayout()
+        for title in ("PPG A/B Ch1", "PPG C/D Ch1", "PPG E/F Ch1", "PPG G/H Ch1", "PPG I/J Ch1"):
             widget = WaveformWidget(title, ["#ffffff"])
             self.wave_widgets[title] = widget
-            ppg_row.addWidget(widget)
-        wave_layout.addLayout(ppg_row)
+            ppg_ch1_row.addWidget(widget)
+        wave_layout.addLayout(ppg_ch1_row)
+
+        ppg_ch2_row = QHBoxLayout()
+        for title in ("PPG A/B Ch2", "PPG C/D Ch2", "PPG E/F Ch2", "PPG G/H Ch2", "PPG I/J Ch2"):
+            widget = WaveformWidget(title, ["#7aa2f7"])
+            self.wave_widgets[title] = widget
+            ppg_ch2_row.addWidget(widget)
+        wave_layout.addLayout(ppg_ch2_row)
+
+        ppg_hint = QLabel("同波長配對: A/B、C/D、E/F、G/H、I/J（上排: Channel1，下排: Channel2）")
+        ppg_hint.setProperty("class", "dim")
+        wave_layout.addWidget(ppg_hint)
 
         legend = QHBoxLayout()
         for text, color in (("  X  ", "#e74c3c"), ("  Y  ", "#2ecc71"), ("  Z  ", "#3498db")):
@@ -584,20 +595,30 @@ class LabelGUIQt(QMainWindow):
             accel = [list(core.waveform_accel[axis]) for axis in ("x", "y", "z")]
             gyro = [list(core.waveform_gyro[axis]) for axis in ("x", "y", "z")]
             mag = [list(core.waveform_mag[axis]) for axis in ("x", "y", "z")]
-            ppg_a = [list(core.waveform_ppg_a["x"])]
-            ppg_b = [list(core.waveform_ppg_b["x"])]
-            ppg_c = [list(core.waveform_ppg_c["x"])]
-            ppg_d = [list(core.waveform_ppg_d["x"])]
-            ppg_e = [list(core.waveform_ppg_e["x"])]
+            ppg_ab_ch1 = [list(core.waveform_ppg_a["x"])]
+            ppg_ab_ch2 = [list(core.waveform_ppg_b["x"])]
+            ppg_cd_ch1 = [list(core.waveform_ppg_c["x"])]
+            ppg_cd_ch2 = [list(core.waveform_ppg_d["x"])]
+            ppg_ef_ch1 = [list(core.waveform_ppg_e["x"])]
+            ppg_ef_ch2 = [list(core.waveform_ppg_f["x"])]
+            ppg_gh_ch1 = [list(core.waveform_ppg_g["x"])]
+            ppg_gh_ch2 = [list(core.waveform_ppg_h["x"])]
+            ppg_ij_ch1 = [list(core.waveform_ppg_i["x"])]
+            ppg_ij_ch2 = [list(core.waveform_ppg_j["x"])]
 
         self.wave_widgets["Accel (g)"].set_series(accel)
         self.wave_widgets["Gyro (dps)"].set_series(gyro)
         self.wave_widgets["Mag (uT)"].set_series(mag)
-        self.wave_widgets["PPG A"].set_series(ppg_a)
-        self.wave_widgets["PPG B"].set_series(ppg_b)
-        self.wave_widgets["PPG C"].set_series(ppg_c)
-        self.wave_widgets["PPG D"].set_series(ppg_d)
-        self.wave_widgets["PPG E"].set_series(ppg_e)
+        self.wave_widgets["PPG A/B Ch1"].set_series(ppg_ab_ch1)
+        self.wave_widgets["PPG A/B Ch2"].set_series(ppg_ab_ch2)
+        self.wave_widgets["PPG C/D Ch1"].set_series(ppg_cd_ch1)
+        self.wave_widgets["PPG C/D Ch2"].set_series(ppg_cd_ch2)
+        self.wave_widgets["PPG E/F Ch1"].set_series(ppg_ef_ch1)
+        self.wave_widgets["PPG E/F Ch2"].set_series(ppg_ef_ch2)
+        self.wave_widgets["PPG G/H Ch1"].set_series(ppg_gh_ch1)
+        self.wave_widgets["PPG G/H Ch2"].set_series(ppg_gh_ch2)
+        self.wave_widgets["PPG I/J Ch1"].set_series(ppg_ij_ch1)
+        self.wave_widgets["PPG I/J Ch2"].set_series(ppg_ij_ch2)
 
         labels = core.get_label_snapshot()
         self._highlight_phase(labels["phase"])
