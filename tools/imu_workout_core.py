@@ -156,9 +156,18 @@ fusion_lock = threading.Lock()
 prev_sensor_ts = None  # for delta_time
 
 
-def check_and_auto_increment_rep():
-    """Check if both concentric and eccentric completed, then auto-increment rep."""
+def check_and_auto_increment_rep(next_phase: str | None = None) -> bool:
+    """Auto-increment rep when a rep is complete.
+
+    A rep is considered complete only after it has had concentric then eccentric.
+    To keep segmented files aligned (both phases within the same rep), we only
+    increment rep when transitioning back to concentric (i.e. the start of the
+    next rep).
+    """
     global rep_phase_tracker
+    if next_phase != "concentric":
+        return False
+
     if rep_phase_tracker["concentric"] and rep_phase_tracker["eccentric"]:
         # Both phases completed, increment rep
         with label_lock:

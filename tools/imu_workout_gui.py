@@ -787,13 +787,23 @@ class LabelGUIQt(QMainWindow):
                 self._show_toast(f"大休息結束 → {act} ({path})", "#27ae60", 1800)
             return
 
+        # Enforce phase order for rep completion: concentric -> eccentric.
+        # - Ignore eccentric selections before any concentric in the current rep.
+        # - Only increment rep when transitioning back to concentric (start next rep)
+        #   so both phases stay within the same rep file.
+        auto_incremented = False
         if value == "concentric":
+            auto_incremented = core.check_and_auto_increment_rep(next_phase="concentric")
             core.rep_phase_tracker["concentric"] = True
+            self._refresh_with_state(phase=value)
         elif value == "eccentric":
+            if not core.rep_phase_tracker.get("concentric", False):
+                return
             core.rep_phase_tracker["eccentric"] = True
+            self._refresh_with_state(phase=value)
+        else:
+            self._refresh_with_state(phase=value)
 
-        auto_incremented = core.check_and_auto_increment_rep()
-        self._refresh_with_state(phase=value)
         if auto_incremented:
             self.update_status()
         self._highlight_phase(value)
